@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verification System</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: #f4f7fb;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 420px;
+      background: white;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    }
+
+    h1 {
+      margin-top: 0;
+      text-align: center;
+    }
+
+    p {
+      color: #555;
+      text-align: center;
+    }
+
+    input {
+      width: 100%;
+      padding: 14px;
+      margin-top: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 15px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      background: #111827;
+      color: white;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+    }
+
+    .code-box {
+      display: none;
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 8px;
+      background: #eef6ff;
+      text-align: center;
+    }
+
+    .code {
+      font-size: 28px;
+      font-weight: bold;
+      letter-spacing: 5px;
+      margin-top: 8px;
+    }
+
+    .message {
+      margin-top: 15px;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .success {
+      color: green;
+    }
+
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+
+    <h1>Email Verification</h1>
+
+    <p>Enter your email to receive a verification code.</p>
+
+    <input
+      type="email"
+      id="email"
+      placeholder="Enter your email"
+      autocomplete="email"
+    >
+
+    <button id="generateBtn">
+      Generate Verification Code
+    </button>
+
+    <div class="code-box" id="codeBox">
+      <div>Your verification code is:</div>
+      <div class="code" id="generatedCode"></div>
+    </div>
+
+    <input
+      type="text"
+      id="codeInput"
+      placeholder="Enter verification code"
+      maxlength="6"
+      inputmode="numeric"
+      style="display:none;"
+    >
+
+    <button
+      id="verifyBtn"
+      style="display:none;"
+    >
+      Verify Code
+    </button>
+
+    <div class="message" id="message"></div>
+
+  </div>
+
+  <script>
+    const generateBtn = document.getElementById("generateBtn");
+    const verifyBtn = document.getElementById("verifyBtn");
+    const emailInput = document.getElementById("email");
+    const codeInput = document.getElementById("codeInput");
+    const codeBox = document.getElementById("codeBox");
+    const generatedCode = document.getElementById("generatedCode");
+    const message = document.getElementById("message");
+
+    let currentCode = "";
+
+    generateBtn.addEventListener("click", () => {
+      const email = emailInput.value.trim();
+
+      if (!email) {
+        message.textContent = "Please enter your email.";
+        message.className = "message error";
+        return;
+      }
+
+      currentCode = Math.floor(
+        100000 + Math.random() * 900000
+      ).toString();
+
+      generatedCode.textContent = currentCode;
+
+      codeBox.style.display = "block";
+      codeInput.style.display = "block";
+      verifyBtn.style.display = "block";
+
+      message.textContent = "Verification code generated.";
+      message.className = "message success";
+    });
+
+    verifyBtn.addEventListener("click", () => {
+      const enteredCode = codeInput.value.trim();
+
+      if (enteredCode === currentCode) {
+        message.textContent = "Email verified successfully!";
+        message.className = "message success";
+      } else {
+        message.textContent = "Incorrect verification code.";
+        message.className = "message error";
+      }
+    });
+  </script>
+
+</body>
+</html>
