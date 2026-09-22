@@ -1,539 +1,420 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Verification System</title>
+  <title>Email Verification System</title>
 
   <style>
-    * {
-      box-sizing: border-box;
-    }
-
     body {
-      margin: 0;
-      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
       display: flex;
       justify-content: center;
       align-items: center;
+      min-height: 100vh;
+      margin: 0;
       padding: 20px;
-      font-family: Arial, sans-serif;
-      background: #f4f7fb;
+      box-sizing: border-box;
     }
 
     .container {
+      background: white;
       width: 100%;
       max-width: 420px;
-      background: white;
       padding: 30px;
       border-radius: 16px;
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+      box-sizing: border-box;
     }
 
     h1 {
-      margin-top: 0;
       text-align: center;
+      margin-top: 0;
     }
 
     p {
-      color: #555;
       text-align: center;
-      line-height: 1.5;
+      color: #666;
     }
 
     input {
       width: 100%;
       padding: 14px;
-      margin-top: 10px;
+      margin: 10px 0;
       border: 1px solid #ccc;
       border-radius: 8px;
+      box-sizing: border-box;
       font-size: 16px;
     }
 
     button {
       width: 100%;
       padding: 14px;
-      margin-top: 15px;
+      margin-top: 10px;
       border: none;
       border-radius: 8px;
-      font-size: 16px;
-      cursor: pointer;
       background: #111827;
       color: white;
+      font-size: 16px;
+      cursor: pointer;
     }
 
     button:disabled {
       opacity: 0.6;
-      cursor: not-allowed;
     }
 
     .code-box {
-      display: none;
       margin-top: 20px;
-      padding: 15px;
-      border-radius: 8px;
-      background: #eef6ff;
+      padding: 20px;
+      background: #f0f4ff;
+      border-radius: 10px;
       text-align: center;
+      display: none;
     }
 
     .code {
-      font-size: 28px;
+      font-size: 32px;
       font-weight: bold;
-      letter-spacing: 5px;
-      margin-top: 8px;
+      letter-spacing: 6px;
+      margin-top: 10px;
     }
 
-    .message {
-      margin-top: 15px;
+    #message {
+      margin-top: 18px;
       text-align: center;
       font-weight: bold;
-      line-height: 1.5;
-    }
-
-    .success {
-      color: green;
-    }
-
-    .error {
-      color: red;
-    }
-
-    .loading {
-      color: #555;
+      white-space: pre-wrap;
     }
   </style>
 </head>
 
 <body>
 
-  <div class="container">
+<div class="container">
 
-    <h1>Email Verification</h1>
+  <h1>Email Verification</h1>
 
-    <p>
-      Enter your email to generate a verification code.
-    </p>
+  <p>Enter your email to generate a verification code.</p>
 
-    <input
-      type="email"
-      id="email"
-      placeholder="Enter your email"
-      autocomplete="email"
-    >
+  <input
+    type="email"
+    id="email"
+    placeholder="Enter your email"
+    autocomplete="email"
+  >
 
-    <button id="generateBtn">
-      Generate Verification Code
-    </button>
+  <button id="generateBtn" onclick="generateCode()">
+    Generate Verification Code
+  </button>
 
-    <div class="code-box" id="codeBox">
-      <div>Your verification code is:</div>
-      <div class="code" id="generatedCode"></div>
-      <div style="margin-top:10px;font-size:13px;color:#666;">
-        Test mode — code displayed on screen
-      </div>
-    </div>
-
-    <input
-      type="text"
-      id="codeInput"
-      placeholder="Enter verification code"
-      maxlength="6"
-      inputmode="numeric"
-      autocomplete="one-time-code"
-      style="display:none;"
-    >
-
-    <button
-      id="verifyBtn"
-      style="display:none;"
-    >
-      Verify Code
-    </button>
-
-    <div class="message" id="message"></div>
-
+  <div class="code-box" id="codeBox">
+    <div>Your verification code is:</div>
+    <div class="code" id="displayCode"></div>
   </div>
 
-  <script>
-    /*
-      SUPABASE CONNECTION
-      -------------------
+  <input
+    type="text"
+    id="verificationCode"
+    placeholder="Enter verification code"
+    inputmode="numeric"
+    maxlength="6"
+  >
 
-      Replace ONLY the two values below.
+  <button id="verifyBtn" onclick="verifyCode()">
+    Verify Code
+  </button>
 
-      1. SUPABASE_URL:
-         Paste your Supabase Project URL.
+  <div id="message"></div>
 
-      2. SUPABASE_PUBLISHABLE_KEY:
-         Paste your Supabase Publishable key.
+</div>
 
-      NEVER put your Supabase Secret key here.
-    */
+<script>
+  // ============================================================
+  // SUPABASE SETTINGS
+  // ============================================================
 
-    const SUPABASE_URL = "https://xpbjsontsvecjuirpzsz.supabase.co/rest/v1/";
+  const SUPABASE_URL = "https://xpbjsontsvecjuirpzsz.supabase.co/rest/v1/";
 
-    const SUPABASE_PUBLISHABLE_KEY =
-      "sb_publishable_QhtpxLWj14U2c0K78yY3cg_fpnIuDZq";
+  const SUPABASE_PUBLISHABLE_KEY =
+    "sb_publishable_QhtpxLWj14U2c0K78yY3cg_fpnIuDZq";
 
 
-    const generateBtn = document.getElementById("generateBtn");
-    const verifyBtn = document.getElementById("verifyBtn");
+  // ============================================================
+  // HELPER
+  // ============================================================
+
+  function showMessage(message, success = false) {
+    const messageBox = document.getElementById("message");
+
+    messageBox.textContent = message;
+    messageBox.style.color = success ? "green" : "red";
+  }
+
+
+  // ============================================================
+  // GENERATE VERIFICATION CODE
+  // ============================================================
+
+  async function generateCode() {
+
     const emailInput = document.getElementById("email");
-    const codeInput = document.getElementById("codeInput");
-    const codeBox = document.getElementById("codeBox");
-    const generatedCode = document.getElementById("generatedCode");
-    const message = document.getElementById("message");
+    const generateBtn = document.getElementById("generateBtn");
 
+    const email = emailInput.value.trim().toLowerCase();
 
-    function showMessage(text, type) {
-      message.textContent = text;
-      message.className = "message " + type;
+    if (!email) {
+      showMessage("Please enter your email address.");
+      return;
     }
 
-
-    function generateCode() {
-      return Math.floor(
-        100000 + Math.random() * 900000
-      ).toString();
+    if (!emailInput.checkValidity()) {
+      showMessage("Please enter a valid email address.");
+      return;
     }
 
+    generateBtn.disabled = true;
 
-    function isValidEmail(email) {
-      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    }
+    showMessage("Creating verification code...", true);
 
+    // Generate a random 6-digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
 
-    /*
-      GENERATE VERIFICATION CODE
-    */
-
-    generateBtn.addEventListener("click", async () => {
-
-      const email = emailInput.value.trim().toLowerCase();
-
-      if (!isValidEmail(email)) {
-        showMessage(
-          "Please enter a valid email address.",
-          "error"
-        );
-        return;
-      }
+    // Code expires in 10 minutes
+    const expiresAt = new Date(
+      Date.now() + 10 * 60 * 1000
+    ).toISOString();
 
 
-      generateBtn.disabled = true;
+    try {
 
-      showMessage(
-        "Generating verification code...",
-        "loading"
-      );
+      const response = await fetch(
+        SUPABASE_URL + "/rest/v1/verifications",
+        {
+          method: "POST",
 
+          headers: {
+            "apikey": SUPABASE_PUBLISHABLE_KEY,
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal"
+          },
 
-      try {
-
-        const code = generateCode();
-
-        const expiresAt = new Date(
-          Date.now() + 10 * 60 * 1000
-        ).toISOString();
-
-
-        /*
-          Save verification record to Supabase.
-        */
-
-        const response = await fetch(
-          SUPABASE_URL + "/rest/v1/verifications",
-          {
-            method: "POST",
-
-            headers: {
-              "Content-Type": "application/json",
-
-              "apikey":
-                SUPABASE_PUBLISHABLE_KEY,
-
-              "Authorization":
-                "Bearer " +
-                SUPABASE_PUBLISHABLE_KEY,
-
-              "Prefer":
-                "return=minimal"
-            },
-
-            body: JSON.stringify({
-              email: email,
-              code: code,
-              verified: false,
-              expires_at: expiresAt
-            })
-          }
-        );
-
-
-        if (!response.ok) {
-
-          const errorText =
-            await response.text();
-
-          console.error(
-            "Supabase error:",
-            errorText
-          );
-
-          throw new Error(
-            "Could not save verification code."
-          );
+          body: JSON.stringify({
+            email: email,
+            code: code,
+            verified: false,
+            expires_at: expiresAt
+          })
         }
-
-
-        /*
-          Display code on screen for testing.
-        */
-
-        generatedCode.textContent = code;
-
-        codeBox.style.display = "block";
-
-        codeInput.style.display = "block";
-
-        verifyBtn.style.display = "block";
-
-
-        showMessage(
-          "Verification code created and saved.",
-          "success"
-        );
-
-
-      } catch (error) {
-
-        console.error(error);
-
-        showMessage(
-          error.message ||
-          "Something went wrong.",
-          "error"
-        );
-
-      } finally {
-
-        generateBtn.disabled = false;
-
-      }
-
-    });
-
-
-    /*
-      VERIFY CODE
-    */
-
-    verifyBtn.addEventListener("click", async () => {
-
-      const email =
-        emailInput.value.trim().toLowerCase();
-
-      const enteredCode =
-        codeInput.value.trim();
-
-
-      if (!enteredCode) {
-
-        showMessage(
-          "Enter the verification code.",
-          "error"
-        );
-
-        return;
-      }
-
-
-      verifyBtn.disabled = true;
-
-      showMessage(
-        "Checking verification code...",
-        "loading"
       );
 
 
-      try {
+      if (!response.ok) {
 
-        /*
-          Search Supabase for the matching
-          email and verification code.
-        */
+        const errorText = await response.text();
 
-        const url =
-          SUPABASE_URL +
-          "/rest/v1/verifications" +
-          "?select=*" +
-          "&email=eq." +
-          encodeURIComponent(email) +
-          "&code=eq." +
-          encodeURIComponent(enteredCode) +
-          "&verified=eq.false" +
-          "&order=expires_at.desc" +
-          "&limit=1";
+        console.error("Supabase error:", errorText);
+
+        throw new Error(
+          "Supabase returned " +
+          response.status +
+          ": " +
+          errorText
+        );
+      }
 
 
-        const response = await fetch(url, {
+      // Display the code
+      document.getElementById("displayCode").textContent = code;
 
+      document.getElementById("codeBox").style.display = "block";
+
+      showMessage(
+        "Verification code created and saved.",
+        true
+      );
+
+    } catch (error) {
+
+      console.error(error);
+
+      showMessage(
+        "Could not save verification code.\n\n" +
+        error.message
+      );
+
+    } finally {
+
+      generateBtn.disabled = false;
+    }
+  }
+
+
+  // ============================================================
+  // VERIFY CODE
+  // ============================================================
+
+  async function verifyCode() {
+
+    const email =
+      document.getElementById("email").value.trim().toLowerCase();
+
+    const code =
+      document.getElementById("verificationCode").value.trim();
+
+    const verifyBtn =
+      document.getElementById("verifyBtn");
+
+
+    if (!email) {
+      showMessage("Please enter your email address.");
+      return;
+    }
+
+    if (!code) {
+      showMessage("Please enter the verification code.");
+      return;
+    }
+
+
+    verifyBtn.disabled = true;
+
+    showMessage("Checking verification code...", true);
+
+
+    try {
+
+      const query =
+        SUPABASE_URL +
+        "/rest/v1/verifications" +
+        "?select=*" +
+        "&email=eq." +
+        encodeURIComponent(email) +
+        "&code=eq." +
+        encodeURIComponent(code) +
+        "&verified=eq.false" +
+        "&order=expires_at.desc" +
+        "&limit=1";
+
+
+      const response = await fetch(
+        query,
+        {
           method: "GET",
 
           headers: {
-
-            "apikey":
-              SUPABASE_PUBLISHABLE_KEY,
-
-            "Authorization":
-              "Bearer " +
-              SUPABASE_PUBLISHABLE_KEY
-
+            "apikey": SUPABASE_PUBLISHABLE_KEY
           }
-
-        });
-
-
-        if (!response.ok) {
-
-          const errorText =
-            await response.text();
-
-          console.error(
-            "Supabase verification error:",
-            errorText
-          );
-
-          throw new Error(
-            "Could not check the verification code."
-          );
         }
+      );
 
 
-        const records =
-          await response.json();
+      if (!response.ok) {
 
+        const errorText = await response.text();
 
-        if (
-          !records ||
-          records.length === 0
-        ) {
+        console.error("Supabase error:", errorText);
 
-          showMessage(
-            "Incorrect or expired verification code.",
-            "error"
-          );
-
-          return;
-        }
-
-
-        const record = records[0];
-
-
-        /*
-          Check expiration time.
-        */
-
-        const expiresAt =
-          new Date(record.expires_at);
-
-        const now =
-          new Date();
-
-
-        if (now > expiresAt) {
-
-          showMessage(
-            "This verification code has expired.",
-            "error"
-          );
-
-          return;
-        }
-
-
-        /*
-          Mark the record as verified.
-        */
-
-        const updateUrl =
-          SUPABASE_URL +
-          "/rest/v1/verifications" +
-          "?id=eq." +
-          encodeURIComponent(record.id);
-
-
-        const updateResponse =
-          await fetch(updateUrl, {
-
-            method: "PATCH",
-
-            headers: {
-
-              "Content-Type":
-                "application/json",
-
-              "apikey":
-                SUPABASE_PUBLISHABLE_KEY,
-
-              "Authorization":
-                "Bearer " +
-                SUPABASE_PUBLISHABLE_KEY,
-
-              "Prefer":
-                "return=minimal"
-
-            },
-
-            body: JSON.stringify({
-              verified: true
-            })
-
-          });
-
-
-        if (!updateResponse.ok) {
-
-          const errorText =
-            await updateResponse.text();
-
-          console.error(
-            "Supabase update error:",
-            errorText
-          );
-
-          throw new Error(
-            "The code was found, but verification could not be completed."
-          );
-        }
-
-
-        showMessage(
-          "Email verified successfully!",
-          "success"
+        throw new Error(
+          "Supabase returned " +
+          response.status +
+          ": " +
+          errorText
         );
-
-
-      } catch (error) {
-
-        console.error(error);
-
-        showMessage(
-          error.message ||
-          "Something went wrong.",
-          "error"
-        );
-
-      } finally {
-
-        verifyBtn.disabled = false;
-
       }
 
-    });
 
-  </script>
+      const records = await response.json();
+
+
+      if (!records || records.length === 0) {
+
+        showMessage(
+          "Invalid verification code."
+        );
+
+        return;
+      }
+
+
+      const record = records[0];
+
+
+      // Check expiration
+      const expiration =
+        new Date(record.expires_at).getTime();
+
+      if (Date.now() > expiration) {
+
+        showMessage(
+          "This verification code has expired."
+        );
+
+        return;
+      }
+
+
+      // Mark as verified
+      const updateUrl =
+        SUPABASE_URL +
+        "/rest/v1/verifications" +
+        "?id=eq." +
+        encodeURIComponent(record.id);
+
+
+      const updateResponse = await fetch(
+        updateUrl,
+        {
+          method: "PATCH",
+
+          headers: {
+            "apikey": SUPABASE_PUBLISHABLE_KEY,
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal"
+          },
+
+          body: JSON.stringify({
+            verified: true
+          })
+        }
+      );
+
+
+      if (!updateResponse.ok) {
+
+        const errorText = await updateResponse.text();
+
+        console.error("Supabase update error:", errorText);
+
+        throw new Error(
+          "Could not update verification status: " +
+          errorText
+        );
+      }
+
+
+      showMessage(
+        "Email verified successfully!",
+        true
+      );
+
+    } catch (error) {
+
+      console.error(error);
+
+      showMessage(
+        "Verification failed.\n\n" +
+        error.message
+      );
+
+    } finally {
+
+      verifyBtn.disabled = false;
+    }
+  }
+</script>
 
 </body>
 </html>
+```
