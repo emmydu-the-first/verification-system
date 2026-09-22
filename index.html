@@ -283,27 +283,21 @@
 
     try {
 
-      const query =
-        SUPABASE_URL +
-        "/rest/v1/verifications" +
-        "?select=*" +
-        "&email=eq." +
-        encodeURIComponent(email) +
-        "&code=eq." +
-        encodeURIComponent(code) +
-        "&verified=eq.false" +
-        "&order=expires_at.desc" +
-        "&limit=1";
-
-
       const response = await fetch(
-        query,
+        SUPABASE_URL + "/rest/v1/rpc/verify_code",
         {
-          method: "GET",
+          method: "POST",
 
           headers: {
-            "apikey": SUPABASE_PUBLISHABLE_KEY
-          }
+            "apikey": SUPABASE_PUBLISHABLE_KEY,
+            "Authorization": "Bearer " + SUPABASE_PUBLISHABLE_KEY,
+            "Content-Type": "application/json"
+          },
+
+          body: JSON.stringify({
+            p_email: email,
+            p_code: code
+          })
         }
       );
 
@@ -323,78 +317,17 @@
       }
 
 
-      const records = await response.json();
+      const result = await response.json();
 
 
-      if (!records || records.length === 0) {
-
-        showMessage(
-          "Invalid verification code."
-        );
-
+      if (!result.success) {
+        showMessage(result.message || "Invalid verification code.");
         return;
-      }
-
-
-      const record = records[0];
-
-
-      // Check expiration
-      const expiration =
-        new Date(record.expires_at).getTime();
-
-      if (Date.now() > expiration) {
-
-        showMessage(
-          "This verification code has expired."
-        );
-
-        return;
-      }
-
-
-      // Mark as verified
-      const updateUrl =
-        SUPABASE_URL +
-        "/rest/v1/verifications" +
-        "?id=eq." +
-        encodeURIComponent(record.id);
-
-
-      const updateResponse = await fetch(
-        updateUrl,
-        {
-          method: "PATCH",
-
-          headers: {
-            "apikey": SUPABASE_PUBLISHABLE_KEY,
-            "Authorization": "Bearer " + SUPABASE_PUBLISHABLE_KEY,
-            "Content-Type": "application/json",
-            "Prefer": "return=minimal"
-          },
-
-          body: JSON.stringify({
-            verified: true
-          })
-        }
-      );
-
-
-      if (!updateResponse.ok) {
-
-        const errorText = await updateResponse.text();
-
-        console.error("Supabase update error:", errorText);
-
-        throw new Error(
-          "Could not update verification status: " +
-          errorText
-        );
       }
 
 
       showMessage(
-        "Email verified successfully!",
+        result.message || "Email verified successfully!",
         true
       );
 
@@ -412,7 +345,8 @@
       verifyBtn.disabled = false;
     }
   }
-</script>
+
+  </script>
 
 </body>
 </html>
