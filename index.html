@@ -61,13 +61,6 @@
       text-align: center;
       display: none;
     }
-    .code {
-      font-size: 34px;
-      font-weight: bold;
-      letter-spacing: 7px;
-      margin: 10px 0;
-      color:#111827;
-    }
     .timer { font-size:14px; color:#6b7280; }
     .timer strong { color:#dc2626; }
     .attempts { font-size:13px; color:#6b7280; text-align:center; margin-top:8px; }
@@ -84,16 +77,15 @@
 <body>
 <div class="container">
   <h1>Email Verification</h1>
-  <p class="subtitle">Enter your email to generate a secure verification code.</p>
+  <p class="subtitle">Enter your email and we will send a secure verification code to your inbox.</p>
 
   <label for="email">Email address</label>
   <input type="email" id="email" placeholder="Enter your email" autocomplete="email">
 
-  <button id="generateBtn" onclick="generateCode()">Generate Verification Code</button>
+  <button id="generateBtn" onclick="generateCode()">Send Verification Code</button>
 
   <div class="code-box" id="codeBox">
-    <div>Your verification code is:</div>
-    <div class="code" id="displayCode"></div>
+    <div>We've sent a verification code to your email.</div>
     <div class="timer" id="timer">Expires in <strong>10:00</strong></div>
     <button class="secondary" id="resendBtn" onclick="generateCode()">Resend New Code</button>
   </div>
@@ -112,6 +104,7 @@
 <script>
   const SUPABASE_URL = "https://xpbjsontsvecjuirpzsz.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_QhtpxLWj14U2c0K78yY3cg_fpnIuDZq";
+  const EMAIL_FUNCTION_URL = SUPABASE_URL + "/functions/v1/verify-alumni-email";
 
   const MAX_ATTEMPTS = 5;
   let attemptsRemaining = MAX_ATTEMPTS;
@@ -155,12 +148,14 @@
     const emailInput = document.getElementById("email");
     const generateBtn = document.getElementById("generateBtn");
     const resendBtn = document.getElementById("resendBtn");
+    const codeBox = document.getElementById("codeBox");
     const email = emailInput.value.trim().toLowerCase();
 
     if (!email) {
       showMessage("Please enter your email address.");
       return;
     }
+
     if (!emailInput.checkValidity()) {
       showMessage("Please enter a valid email address.");
       return;
@@ -168,38 +163,59 @@
 
     generateBtn.disabled = true;
     resendBtn.disabled = true;
-    showMessage("Creating verification code...", true);
+    showMessage("Sending verification code...", true);
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
     try {
-      const response = await fetch(SUPABASE_URL + "/rest/v1/rpc/create_verification", {
+      const response = await fetch(EMAIL_FUNCTION_URL, {
         method: "POST",
         headers: {
           "apikey": SUPABASE_PUBLISHABLE_KEY,
           "Authorization": "Bearer " + SUPABASE_PUBLISHABLE_KEY,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ p_email: email, p_code: code, p_expires_at: expiresAt })
+        body: JSON.stringify({
+          email: email,
+          code: code,
+          expires_at: expiresAt
+        })
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error("Supabase returned " + response.status + ": " + errorText);
+      const responseText = await response.text();
+      let result = {};
+
+      try {
+        result = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        result = { error: responseText };
       }
 
-      document.getElementById("displayCode").textContent = code;
-      document.getElementById("codeBox").style.display = "block";
+      if (!response.ok) {
+        throw new Error(
+          result.error ||
+          result.message ||
+          "The email service returned HTTP " + response.status
+        );
+      }
+
+      codeBox.style.display = "block";
       document.getElementById("verificationCode").value = "";
       attemptsRemaining = MAX_ATTEMPTS;
       updateAttempts();
       startTimer(expiresAt);
 
-      showMessage("New verification code created.", true);
+      showMessage(
+        "Verification code sent. Please check your email inbox.",
+        true
+      );
     } catch (error) {
       console.error(error);
-      showMessage("Could not save verification code.\n\n" + error.message);
+      showMessage(
+        "Could not send verification code.\n\n" +
+        (error.message || "Please try again.")
+      );
     } finally {
       generateBtn.disabled = false;
       resendBtn.disabled = false;
@@ -215,10 +231,12 @@
       showMessage("Please enter your email address.");
       return;
     }
+
     if (!code) {
       showMessage("Please enter the verification code.");
       return;
     }
+
     if (attemptsRemaining <= 0) {
       showMessage("Too many incorrect attempts. Please request a new code.");
       return;
@@ -228,19 +246,27 @@
     showMessage("Checking verification code...", true);
 
     try {
-      const response = await fetch(SUPABASE_URL + "/rest/v1/rpc/verify_code", {
-        method: "POST",
-        headers: {
-          "apikey": SUPABASE_PUBLISHABLE_KEY,
-          "Authorization": "Bearer " + SUPABASE_PUBLISHABLE_KEY,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ p_email: email, p_code: code })
-      });
+      const response = await fetch(
+        SUPABASE_URL + "/rest/v1/rpc/verify_code",
+        {
+          method: "POST",
+          headers: {
+            "apikey": SUPABASE_PUBLISHABLE_KEY,
+            "Authorization": "Bearer " + SUPABASE_PUBLISHABLE_KEY,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            p_email: email,
+            p_code: code
+          })
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error("Supabase returned " + response.status + ": " + errorText);
+        throw new Error(
+          "Supabase returned " + response.status + ": " + errorText
+        );
       }
 
       const result = await response.json();
@@ -250,23 +276,38 @@
         updateAttempts();
 
         if (attemptsRemaining <= 0) {
-          showMessage("Too many incorrect attempts. Please request a new code.");
+          showMessage(
+            "Too many incorrect attempts. Please request a new code."
+          );
         } else {
-          showMessage((result.message || "Invalid verification code.") +
-            "\n\n" + attemptsRemaining + " attempt(s) remaining.");
+          showMessage(
+            (result.message || "Invalid verification code.") +
+            "\n\n" +
+            attemptsRemaining +
+            " attempt(s) remaining."
+          );
         }
+
         return;
       }
 
       clearInterval(timerInterval);
-      document.getElementById("verifyBtn").disabled = true;
-      showMessage(result.message || "Email verified successfully!", true);
+      verifyBtn.disabled = true;
+      showMessage(
+        result.message || "Email verified successfully!",
+        true
+      );
     } catch (error) {
       console.error(error);
-      showMessage("Verification failed.\n\n" + error.message);
+      showMessage(
+        "Verification failed.\n\n" +
+        (error.message || "Please try again.")
+      );
     } finally {
-      if (attemptsRemaining > 0 &&
-          !document.getElementById("message").textContent.includes("successfully")) {
+      if (
+        attemptsRemaining > 0 &&
+        !document.getElementById("message").textContent.includes("successfully")
+      ) {
         verifyBtn.disabled = false;
       }
     }
